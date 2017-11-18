@@ -65,72 +65,58 @@ Theta2_grad = zeros(size(Theta2));
 % ============== RE-CREATING Y AS A VECTOR OF 1s and 0S =======================
 % first we create a num_labels, y matrix of zeros
 % where we will store all our y vectors.
-yTemp = zeros(num_labels, size(y, 1));
+yVector = zeros(num_labels, size(y, 1));
 
 % next we iterate through the y vector to identify where to insert 1
 for i = 1:size(y, 1)
-  yTemp(y(i), i) = 1;
+  yVector(y(i), i) = 1;
 endfor
 
-% lastly assign temporary y matrix to y variable
-y = yTemp;
 % =============================================================================
 
-% Add a column of ones to the X matrix.
-X = [ones(m, 1) X];
+% ======================= VECTORIZED FEEDFORWARD NEURAL NETWORK ===============
+% defining first layer activation (adding bias unit to X training examples)
+a_one = [ones(m, 1) X];
 
-% ================ ITERATING OVER EACH TRAINING EXAMPLE =======================
-for i = 1:m
-  % Set the sum of K neurons in output layer to zero for each iteration
-  bigK = 0;
+% layer two activations and Z
+z_two = a_one * Theta1';
+a_two = sigmoid(z_two);
+a_two = [ones(m, 1) a_two];   % adding bias unit to second layer.
 
-  % Z and activation for hidden (2) layer
-  z_two = X(i,:) * Theta1';
-  a_two = sigmoid(z_two);
+% layer three activations and Z
+z_three = a_two * Theta2';
+a_three = sigmoid(z_three);
 
-  % adding bias value 1 to second layer
-  a_two = [1 a_two];
+% ============================= ERROR CALCULATION =============================
+J = 1/m * sum(sum(-1 * yVector' .* log(a_three)-(1-yVector')...
+    .* log(1-a_three)));
 
-  % Z and activation for output (3) layer
-  z_three = a_two * Theta2';
-  a_three = sigmoid(z_three);
+% ================ CALCULATING REGULARIZATION PARAMETER =======================
+regTerm = (sum(sum(Theta1(:,2:end).^2)) + sum(sum(Theta2(:,2:end).^2)))...
+          * (lambda/(2*m));
 
-  % getting sum of all errors for each training example
-  for smallK = 1:num_labels
-    % sum of all errors K
-    bigK = bigK + ((-y(smallK, i) * log(a_three(smallK)))...
-    - ((1 - y(smallK, i)) * log(1 - a_three(smallK))));
-  endfor
+J = J + regTerm;
 
-  % sum of errors J for all training examples.
-  J = J + ((1 / m) * bigK);
-endfor
-% ============================================================================
+% ================ GRADIENT CALCULATION =======================================
+d_three = a_three - yVector';
+d_two = (d_three * Theta2(:,2:end)) .* sigmoidGradient(z_two);
+Delta1 = d_two' * a_one;
+Delta2 = d_three' * a_two;
 
-% ================ CALCULATING REGULARIZATION PARAMETER ======================
-sumAllHidden = 0;
-sumAllOutput = 0;
-for j = 1:hidden_layer_size
-  sumAllK = 0;
-  for k = 2:input_layer_size + 1
-    sumAllK = sumAllK + (Theta1(j, k).^2);
-  endfor
-  sumAllHidden = sumAllHidden + sumAllK;
-endfor
+Theta1_grad = Delta1 * (1 / m);
+Theta2_grad = Delta2 * (1 / m);
 
-for j = 1:num_labels
-  sumAllK = 0;
-  for k = 2:hidden_layer_size + 1
-    sumAllK = sumAllK + (Theta2(j, k).^2);
-  endfor
-  sumAllOutput = sumAllOutput + sumAllK;
-endfor
+% Regularized gradients
+% Removing bias term from Thetas, since bias does not get regularized.
+Theta1(:, 1) = 0;
+Theta2(:, 1) = 0;
 
-reg = (lambda * (sumAllHidden + sumAllOutput)) / (2 * m);
+Theta1Reg = Theta1 .* (lambda / m);
+Theta2Reg = Theta2 .* (lambda / m);
 
-J = J + reg;
+Theta1_grad = Theta1_grad + Theta1Reg;
+Theta2_grad = Theta2_grad + Theta2Reg;
+
 % Unroll gradients
 grad = [Theta1_grad(:) ; Theta2_grad(:)];
-
-
 end
