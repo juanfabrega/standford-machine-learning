@@ -21,7 +21,9 @@ grad = zeros(size(theta));
 z = X * theta;
 
 % Logistic regression cost function
-J = (1 / m) * sum(-y .* log(sigmoid(z)) - (1 - y) .* log(1 - sigmoid(z))) + (lambda / (2 * m)) * sum(theta(2:length(theta)).^2);
+J = (1 / m) * sum(-y .* log(sigmoid(z)) - (1 - y)...
+    .* log(1 - sigmoid(z))) + (lambda / (2 * m))...
+    * sum(theta(2:length(theta)).^2);
 
 % Gradient function
 grad = (1 / m) * (X' * (sigmoid(z) - y));
